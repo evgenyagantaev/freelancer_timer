@@ -13,6 +13,7 @@ pommodoroMinutes = 0
 current_pommodoro = 0
 pommodoro_index = 0
 hour_index = 0
+hours_worked = 0
 
 remainder_data = []
 
@@ -30,12 +31,11 @@ def read_json():
             pommodoroMinutes=data['pommodoroMinutes']
             deadline_label.config(text=f"{data['deadLineYear']}-{data['deadLineMonth']}-{data['deadLineDay']}")
             
-            update_current_remainder(1000)
-            
             deadline_date = datetime.datetime(data['deadLineYear'], data['deadLineMonth'], data['deadLineDay'])
 
             # Update the deadline text field with the remaining seconds
             update_deadline()
+            
     except FileNotFoundError:
         print("JSON file not found!")
         
@@ -44,6 +44,7 @@ def read_json():
             remainder_data = json.load(file)
             remainder=remainder_data['current_remainder']
             update_current_remainder(remainder)
+            update_hours_worked()
     except FileNotFoundError:
         print("JSON file not found!")
 
@@ -64,12 +65,29 @@ def update_deadline():
     
     # Schedule the next update in 1 second
     deadline_field.after(1000, update_deadline)
+
+def update_hours_worked():
+    global hours_worked, current_remainder, week_hours
+
+    hours_worked = int((week_hours * 60 * 60 - current_remainder) / 60 / 60)
+    formatted_hours = "{:,}".format(hours_worked)
+    hours_worked_field.config(text=formatted_hours)
     
 def reset_week():
-    global current_remainder, week_hours
+    global current_remainder, week_hours, remainder_data
     
     seconds = week_hours*60*60 
     update_current_remainder(seconds)
+    # Update the "current_remainder" value
+    remainder_data["current_remainder"] = current_remainder
+    # Write the updated data back to the JSON file
+    with open('current_remainder.json', 'w') as json_file:
+        json.dump(remainder_data, json_file)
+
+    update_hours_worked()
+
+    new_week_lock_button.configure(bg="red")
+    new_week_button.config(state="disabled")
     
 def update_current_remainder(seconds):
     global current_remainder
@@ -97,9 +115,8 @@ def update_pommodoro():
     else:
         print("Pommodoro finished")
         pause_resume_button.config(state="disabled")
-        start_button.config(state="active")
         current_pommodoro = 0
-        current_pommodoro_field.config(text="click START to start")
+        update_hours_worked()
         
         # Update the "current_remainder" value
         remainder_data["current_remainder"] = current_remainder
@@ -124,6 +141,9 @@ def update_pommodoro():
                     else:
                         hours[hour_index].configure(bg="red")
                 hour_index = hour_index + 1
+
+        current_pommodoro_field.config(text="click START to start")
+        start_button.config(state="active")
             
         
     
@@ -156,6 +176,19 @@ def start():
             
     update_pommodoro()
 
+def unlock_new_week():
+
+    new_week_lock_button.configure(bg="green")
+    new_week_button.config(state="active")
+
+
+#***********************************************************************************************************
+#***********************************************************************************************************
+#***********************************************************************************************************
+#***********************************************************************************************************
+#***********************************************************************************************************
+
+
 
 root = tk.Tk()
 root.title("Freelancers timer")
@@ -165,6 +198,8 @@ root.attributes("-topmost", True)  # Set the window to be always on top
 # Set initial dimensions of the GUI window
 #root.geometry("500x300")
 
+
+
 # Create labels
 project_name_label = tk.Label(root, text="Project Name: ")
 project_name_label.pack()
@@ -173,12 +208,24 @@ project_name_label.pack()
 delimiter_label01 = tk.Label(root, text="***********************")
 delimiter_label01.pack()
 
+# Create a frame to hold the new week buttons
+week_buttons_frame = tk.Frame(root)
+week_buttons_frame.pack()
+
 # Create button start new week
-new_week_button = tk.Button(root, text="start new week", command=reset_week)
-new_week_button.pack()
-# Create a label for the current week reminder
+new_week_lock_button = tk.Button(week_buttons_frame, text="unlock", command=unlock_new_week)
+new_week_lock_button.configure(bg="red")
+new_week_lock_button.pack(side="left", padx=10)
+# Create button start new week
+new_week_button = tk.Button(week_buttons_frame, text="start new week", command=reset_week)
+new_week_button.config(state="disabled")
+new_week_button.pack(side="left", padx=10)
+# Create a label for the current week remainder
 current_week_field = tk.Label(root, text="current reminder...")
 current_week_field.pack()
+# Create a label for the hours worked
+hours_worked_field = tk.Label(root, text="hours worked...")
+hours_worked_field.pack()
 
 # Create a label for the deadline countdown
 delimiter_label01 = tk.Label(root, text="***********************")
