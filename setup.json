@@ -1,0 +1,9 @@
+{
+  "projectName": "iBRAIN main job",
+  "weekStart": "Sunday",
+  "weekHours": 40,
+  "pommodoroMinutes": 20,
+  "deadLineYear": 2023,
+  "deadLineMonth": 10,
+  "deadLineDay": 2
+}
